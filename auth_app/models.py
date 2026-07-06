@@ -15,3 +15,12 @@ class CustomUser(AbstractUser):
         max_length=20,
         choices=TYPE_CHOICES,
     )
+    file = models.ImageField(
+        upload_to="profile_pictures/",
+        blank=True,
+        null=True,
+    )
+    location = models.CharField(max_length=100, blank=True, default="")
+    tel = models.CharField(max_length=20, blank=True, default="")
+    description = models.TextField(blank=True, default="")
+    working_hours = models.CharField(max_length=50, blank=True, default="")
