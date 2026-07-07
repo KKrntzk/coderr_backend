@@ -13,6 +13,11 @@ User = get_user_model()
 class ProfileDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), IsOwnProfile()]
+        return [IsAuthenticated()]
+
     def get_object(self, pk):
         try:
             return User.objects.get(pk=pk)
@@ -34,12 +39,7 @@ class ProfileDetailView(APIView):
             return Response(
                 {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        permission = IsOwnProfile()
-        if not permission.has_object_permission(request, self, user):
-            return Response(
-                {"detail": "You do not have permission to edit this profile."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        self.check_object_permissions(request, user)
         serializer = ProfileSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
