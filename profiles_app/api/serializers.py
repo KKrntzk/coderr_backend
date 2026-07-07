@@ -48,3 +48,19 @@ class ProfileListSerializer(serializers.ModelSerializer):
             "working_hours",
             "type",
         ]
+
+
+class CustomerProfileListSerializer(serializers.ModelSerializer):
+    user = serializers.IntegerField(source="id", read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "user",
+            "username",
+            "first_name",
+            "last_name",
+            "file",
+            "uploaded_at",
+            "type",
+        ]

@@ -5,7 +5,11 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 from rest_framework.generics import ListAPIView
 
-from profiles_app.api.serializers import ProfileSerializer, ProfileListSerializer
+from profiles_app.api.serializers import (
+    ProfileSerializer,
+    ProfileListSerializer,
+    CustomerProfileListSerializer,
+)
 from profiles_app.api.permissions import IsOwnProfile
 
 User = get_user_model()
@@ -54,3 +58,11 @@ class BusinessProfileListView(ListAPIView):
 
     def get_queryset(self):
         return User.objects.filter(type=User.BUSINESS)
+
+
+class CustomerProfileListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CustomerProfileListSerializer
+
+    def get_queryset(self):
+        return User.objects.filter(type=User.CUSTOMER)
