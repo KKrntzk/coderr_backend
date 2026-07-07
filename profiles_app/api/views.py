@@ -34,7 +34,12 @@ class ProfileDetailView(APIView):
             return Response(
                 {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        self.check_object_permissions(request, user)
+        permission = IsOwnProfile()
+        if not permission.has_object_permission(request, self, user):
+            return Response(
+                {"detail": "You do not have permission to edit this profile."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         serializer = ProfileSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
