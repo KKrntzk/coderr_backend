@@ -115,3 +115,54 @@ class ProfilePatchViewTest(APITestCase):
         self.assertEqual(response.data["first_name"], "")
         self.assertEqual(response.data["location"], "")
         self.assertEqual(response.data["description"], "")
+
+
+class BusinessProfileListViewTest(APITestCase):
+
+    def setUp(self):
+        self.url = reverse("business-profile-list")
+        self.customer = User.objects.create_user(
+            username="testcustomer",
+            email="customer@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.business1 = User.objects.create_user(
+            username="testbusiness1",
+            email="business1@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.business2 = User.objects.create_user(
+            username="testbusiness2",
+            email="business2@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.token = Token.objects.create(user=self.customer)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+
+    def test_get_business_profiles_success(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_get_business_profiles_only_business(self):
+        response = self.client.get(self.url)
+        for profile in response.data:
+            self.assertEqual(profile["type"], "business")
+
+    def test_get_business_profiles_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_business_profiles_fields_not_null(self):
+        response = self.client.get(self.url)
+        for profile in response.data:
+            self.assertEqual(profile["first_name"], "")
+            self.assertEqual(profile["last_name"], "")
+            self.assertEqual(profile["location"], "")
+            self.assertEqual(profile["tel"], "")
+            self.assertEqual(profile["description"], "")
+            self.assertEqual(profile["working_hours"], "")
