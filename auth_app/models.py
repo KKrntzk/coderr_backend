@@ -24,3 +24,4 @@ class CustomUser(AbstractUser):
     tel = models.CharField(max_length=20, blank=True, default="")
     description = models.TextField(blank=True, default="")
     working_hours = models.CharField(max_length=50, blank=True, default="")
+    uploaded_at = models.DateTimeField(null=True, blank=True)
