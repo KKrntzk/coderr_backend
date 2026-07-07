@@ -3,8 +3,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
+from rest_framework.generics import ListAPIView
 
-from profiles_app.api.serializers import ProfileSerializer
+from profiles_app.api.serializers import ProfileSerializer, ProfileListSerializer
 from profiles_app.api.permissions import IsOwnProfile
 
 User = get_user_model()
@@ -45,3 +46,11 @@ class ProfileDetailView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BusinessProfileListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileListSerializer
+
+    def get_queryset(self):
+        return User.objects.filter(type=User.BUSINESS)
