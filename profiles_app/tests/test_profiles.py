@@ -166,3 +166,55 @@ class BusinessProfileListViewTest(APITestCase):
             self.assertEqual(profile["tel"], "")
             self.assertEqual(profile["description"], "")
             self.assertEqual(profile["working_hours"], "")
+
+
+class CustomerProfileListViewTest(APITestCase):
+
+    def setUp(self):
+        self.url = reverse("customer-profile-list")
+        self.business = User.objects.create_user(
+            username="testbusiness",
+            email="business@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.customer1 = User.objects.create_user(
+            username="testcustomer1",
+            email="customer1@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.customer2 = User.objects.create_user(
+            username="testcustomer2",
+            email="customer2@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.token = Token.objects.create(user=self.business)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+
+    def test_get_customer_profiles_success(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_get_customer_profiles_only_customer(self):
+        response = self.client.get(self.url)
+        for profile in response.data:
+            self.assertEqual(profile["type"], "customer")
+
+    def test_get_customer_profiles_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_customer_profiles_fields_present(self):
+        response = self.client.get(self.url)
+        for profile in response.data:
+            self.assertIn("user", profile)
+            self.assertIn("username", profile)
+            self.assertIn("first_name", profile)
+            self.assertIn("last_name", profile)
+            self.assertIn("file", profile)
+            self.assertIn("uploaded_at", profile)
+            self.assertIn("type", profile)
