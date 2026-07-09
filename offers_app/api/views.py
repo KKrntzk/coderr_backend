@@ -31,6 +31,12 @@ class OfferListView(ListAPIView):
 
         creator_id = self.request.query_params.get("creator_id")
         if creator_id:
+            try:
+                creator_id = int(creator_id)
+            except ValueError:
+                from rest_framework.exceptions import ValidationError
+
+                raise ValidationError({"creator_id": "Must be a valid integer."})
             queryset = queryset.filter(user__id=creator_id)
 
         min_price = self.request.query_params.get("min_price")
