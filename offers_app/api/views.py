@@ -4,6 +4,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Min
+from rest_framework.generics import ListCreateAPIView
+
 
 from offers_app.models import Offer
 from offers_app.api.serializers import OfferListSerializer, OfferCreateSerializer
@@ -15,14 +17,22 @@ class OfferPagination(PageNumberPagination):
     page_size_query_param = "page_size"
 
 
-class OfferListView(ListAPIView):
-    permission_classes = [AllowAny]
-    serializer_class = OfferListSerializer
+class OfferListCreateView(ListCreateAPIView):
     pagination_class = OfferPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ["title", "description"]
     ordering_fields = ["updated_at", "min_price"]
     ordering = ["-updated_at"]
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsBusinessUser()]
+        return [AllowAny()]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return OfferCreateSerializer
+        return OfferListSerializer
 
     def get_queryset(self):
         queryset = Offer.objects.annotate(
@@ -61,11 +71,6 @@ class OfferListView(ListAPIView):
             queryset = queryset.filter(min_delivery_time__lte=max_delivery_time)
 
         return queryset
-
-
-class OfferCreateView(CreateAPIView):
-    permission_classes = [IsBusinessUser]
-    serializer_class = OfferCreateSerializer
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
