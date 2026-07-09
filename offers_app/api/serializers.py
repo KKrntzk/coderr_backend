@@ -147,3 +147,83 @@ class OfferRetrieveSerializer(serializers.ModelSerializer):
     def get_min_delivery_time(self, obj):
         times = obj.details.values_list("delivery_time_in_days", flat=True)
         return min(times) if times else None
+
+
+class OfferDetailUpdateSerializer(serializers.ModelSerializer):
+    features = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OfferDetail
+        fields = [
+            "id",
+            "title",
+            "revisions",
+            "delivery_time_in_days",
+            "price",
+            "features",
+            "offer_type",
+        ]
+
+    def get_features(self, obj):
+        if isinstance(obj, OfferDetail):
+            return list(obj.features.values_list("name", flat=True))
+        return obj.get("features", [])
+
+    def to_internal_value(self, data):
+        features = data.get("features", None)
+        ret = super().to_internal_value(data)
+        if features is not None:
+            ret["features"] = features
+        return ret
+
+
+class OfferUpdateSerializer(serializers.ModelSerializer):
+    details = OfferDetailUpdateSerializer(many=True, required=False)
+
+    class Meta:
+        model = Offer
+        fields = [
+            "id",
+            "title",
+            "image",
+            "description",
+            "details",
+        ]
+
+    def update(self, instance, validated_data):
+        details_data = validated_data.pop("details", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if details_data:
+            for detail_data in details_data:
+                offer_type = detail_data.get("offer_type")
+                features_data = detail_data.pop("features", None)
+
+                offer_detail = instance.details.filter(offer_type=offer_type).first()
+                if offer_detail:
+                    for attr, value in detail_data.items():
+                        setattr(offer_detail, attr, value)
+                    offer_detail.save()
+
+                    if features_data is not None:
+                        offer_detail.features.all().delete()
+                        for feature_name in features_data:
+                            Feature.objects.create(
+                                offer_detail=offer_detail, name=feature_name
+                            )
+
+        return instance
+
+    def to_representation(self, instance):
+        return {
+            "id": instance.id,
+            "title": instance.title,
+            "image": instance.image.url if instance.image else None,
+            "description": instance.description,
+            "details": OfferDetailUpdateSerializer(
+                instance.details.all(), many=True
+            ).data,
+        }
