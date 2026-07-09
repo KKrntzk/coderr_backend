@@ -58,7 +58,7 @@ class FeatureSerializer(serializers.ListSerializer):
 
 
 class OfferDetailCreateSerializer(serializers.ModelSerializer):
-    features = serializers.ListField(child=serializers.CharField())
+    features = serializers.SerializerMethodField()
 
     class Meta:
         model = OfferDetail
@@ -72,10 +72,16 @@ class OfferDetailCreateSerializer(serializers.ModelSerializer):
             "offer_type",
         ]
 
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        rep["features"] = list(instance.features.values_list("name", flat=True))
-        return rep
+    def get_features(self, obj):
+        if isinstance(obj, OfferDetail):
+            return list(obj.features.values_list("name", flat=True))
+        return obj.get("features", [])
+
+    def to_internal_value(self, data):
+        features = data.get("features", [])
+        ret = super().to_internal_value(data)
+        ret["features"] = features
+        return ret
 
 
 class OfferCreateSerializer(serializers.ModelSerializer):
