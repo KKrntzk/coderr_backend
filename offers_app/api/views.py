@@ -12,12 +12,13 @@ from rest_framework.generics import (
 )
 
 
-from offers_app.models import Offer
+from offers_app.models import Offer, OfferDetail
 from offers_app.api.serializers import (
     OfferListSerializer,
     OfferCreateSerializer,
     OfferRetrieveSerializer,
     OfferUpdateSerializer,
+    OfferDetailCreateSerializer,
 )
 from offers_app.api.permissions import IsBusinessUser, IsOfferOwner
 
@@ -109,3 +110,9 @@ class OfferRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
         obj = super().get_object()
         self.check_object_permissions(self.request, obj)
         return obj
+
+
+class OfferDetailRetrieveView(RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = OfferDetailCreateSerializer
+    queryset = OfferDetail.objects.all()
