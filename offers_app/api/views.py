@@ -86,7 +86,7 @@ class OfferListCreateView(ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-class OfferRetrieveUpdateView(RetrieveUpdateDestroyAPIView):
+class OfferRetrieveUpdateDestroyView(RetrieveUpdateDestroyAPIView):
     http_method_names = ["get", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
