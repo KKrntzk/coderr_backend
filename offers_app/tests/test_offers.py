@@ -11,7 +11,7 @@ User = get_user_model()
 class OfferListViewTest(APITestCase):
 
     def setUp(self):
-        self.url = reverse("offer-list")
+        self.url = reverse("offer-list-create")
         self.business_user = User.objects.create_user(
             username="testbusiness",
             email="business@mail.de",
@@ -108,3 +108,99 @@ class OfferListViewTest(APITestCase):
         self.assertIn("min_price", result)
         self.assertIn("min_delivery_time", result)
         self.assertIn("user_details", result)
+
+
+class OfferCreateViewTest(APITestCase):
+
+    def setUp(self):
+        self.url = reverse("offer-list-create")
+        self.business_user = User.objects.create_user(
+            username="testbusiness",
+            email="business@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.customer_user = User.objects.create_user(
+            username="testcustomer",
+            email="customer@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.business_token = Token.objects.create(user=self.business_user)
+        self.customer_token = Token.objects.create(user=self.customer_user)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.business_token.key)
+        self.valid_data = {
+            "title": "Grafikdesign-Paket",
+            "description": "Ein umfassendes Grafikdesign-Paket.",
+            "details": [
+                {
+                    "title": "Basic Design",
+                    "revisions": 2,
+                    "delivery_time_in_days": 5,
+                    "price": 100,
+                    "features": ["Logo Design", "Visitenkarte"],
+                    "offer_type": "basic",
+                },
+                {
+                    "title": "Standard Design",
+                    "revisions": 5,
+                    "delivery_time_in_days": 7,
+                    "price": 200,
+                    "features": ["Logo Design", "Visitenkarte", "Briefpapier"],
+                    "offer_type": "standard",
+                },
+                {
+                    "title": "Premium Design",
+                    "revisions": 10,
+                    "delivery_time_in_days": 10,
+                    "price": 500,
+                    "features": ["Logo Design", "Visitenkarte", "Briefpapier", "Flyer"],
+                    "offer_type": "premium",
+                },
+            ],
+        }
+
+    def test_create_offer_success(self):
+        response = self.client.post(self.url, self.valid_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["title"], "Grafikdesign-Paket")
+        self.assertEqual(len(response.data["details"]), 3)
+
+    def test_create_offer_features_saved(self):
+        response = self.client.post(self.url, self.valid_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        basic_detail = next(
+            d for d in response.data["details"] if d["offer_type"] == "basic"
+        )
+        self.assertIn("Logo Design", basic_detail["features"])
+        self.assertIn("Visitenkarte", basic_detail["features"])
+
+    def test_create_offer_missing_details(self):
+        data = self.valid_data.copy()
+        data["details"] = data["details"][:2]
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_offer_wrong_offer_types(self):
+        data = self.valid_data.copy()
+        data["details"][0]["offer_type"] = "basic"
+        data["details"][1]["offer_type"] = "basic"
+        data["details"][2]["offer_type"] = "basic"
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_offer_customer_forbidden(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.customer_token.key)
+        response = self.client.post(self.url, self.valid_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_offer_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.post(self.url, self.valid_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_offer_user_set_automatically(self):
+        response = self.client.post(self.url, self.valid_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        offer = Offer.objects.get(id=response.data["id"])
+        self.assertEqual(offer.user, self.business_user)
