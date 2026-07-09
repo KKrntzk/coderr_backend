@@ -85,17 +85,6 @@ class OfferListCreateView(ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-class OfferRetrieveView(RetrieveAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = OfferRetrieveSerializer
-
-    def get_queryset(self):
-        return Offer.objects.annotate(
-            min_price=Min("details__price"),
-            min_delivery_time=Min("details__delivery_time_in_days"),
-        )
-
-
 class OfferRetrieveUpdateView(RetrieveUpdateAPIView):
     http_method_names = ["get", "patch", "head", "options"]
 
