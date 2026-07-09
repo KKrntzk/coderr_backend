@@ -237,3 +237,51 @@ class OfferUpdateViewTest(APITestCase):
         )
         self.assertEqual(standard["title"], "Standard")
         self.assertEqual(str(standard["price"]), "200.00")
+
+
+class OfferDeleteViewTest(APITestCase):
+
+    def setUp(self):
+        self.business_user = User.objects.create_user(
+            username="testbusiness",
+            email="business@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.other_business = User.objects.create_user(
+            username="otherbusiness",
+            email="other@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.token = Token.objects.create(user=self.business_user)
+        self.other_token = Token.objects.create(user=self.other_business)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.token.key)
+        self.offer = Offer.objects.create(
+            user=self.business_user,
+            title="Website Design",
+            description="Professionelles Website-Design",
+        )
+        self.url = reverse("offer-retrieve-update", kwargs={"pk": self.offer.pk})
+
+    def test_delete_offer_success(self):
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Offer.objects.filter(pk=self.offer.pk).exists())
+
+    def test_delete_offer_not_owner(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.other_token.key)
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Offer.objects.filter(pk=self.offer.pk).exists())
+
+    def test_delete_offer_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(Offer.objects.filter(pk=self.offer.pk).exists())
+
+    def test_delete_offer_not_found(self):
+        url = reverse("offer-retrieve-update", kwargs={"pk": 9999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
