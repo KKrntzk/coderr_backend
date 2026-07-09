@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from offers_app.models import Offer, OfferDetail
+from offers_app.models import Offer, OfferDetail, Feature
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -51,3 +51,64 @@ class OfferListSerializer(serializers.ModelSerializer):
     def get_min_delivery_time(self, obj):
         times = obj.details.values_list("delivery_time_in_days", flat=True)
         return min(times) if times else None
+
+
+class FeatureSerializer(serializers.ListSerializer):
+    child = serializers.CharField()
+
+
+class OfferDetailCreateSerializer(serializers.ModelSerializer):
+    features = serializers.ListField(child=serializers.CharField())
+
+    class Meta:
+        model = OfferDetail
+        fields = [
+            "id",
+            "title",
+            "revisions",
+            "delivery_time_in_days",
+            "price",
+            "features",
+            "offer_type",
+        ]
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep["features"] = list(instance.features.values_list("name", flat=True))
+        return rep
+
+
+class OfferCreateSerializer(serializers.ModelSerializer):
+    details = OfferDetailCreateSerializer(many=True)
+
+    class Meta:
+        model = Offer
+        fields = [
+            "id",
+            "title",
+            "image",
+            "description",
+            "details",
+        ]
+
+    def validate_details(self, value):
+        if len(value) != 3:
+            raise serializers.ValidationError(
+                "An offer must contain exactly 3 details."
+            )
+        offer_types = [d["offer_type"] for d in value]
+        if sorted(offer_types) != ["basic", "premium", "standard"]:
+            raise serializers.ValidationError(
+                "Details must contain basic, standard and premium."
+            )
+        return value
+
+    def create(self, validated_data):
+        details_data = validated_data.pop("details")
+        offer = Offer.objects.create(**validated_data)
+        for detail_data in details_data:
+            features_data = detail_data.pop("features")
+            offer_detail = OfferDetail.objects.create(offer=offer, **detail_data)
+            for feature_name in features_data:
+                Feature.objects.create(offer_detail=offer_detail, name=feature_name)
+        return offer
