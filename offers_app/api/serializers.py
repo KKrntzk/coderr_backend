@@ -118,3 +118,32 @@ class OfferCreateSerializer(serializers.ModelSerializer):
             for feature_name in features_data:
                 Feature.objects.create(offer_detail=offer_detail, name=feature_name)
         return offer
+
+
+class OfferRetrieveSerializer(serializers.ModelSerializer):
+    details = OfferDetailMinimalSerializer(many=True, read_only=True)
+    min_price = serializers.SerializerMethodField()
+    min_delivery_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Offer
+        fields = [
+            "id",
+            "user",
+            "title",
+            "image",
+            "description",
+            "created_at",
+            "updated_at",
+            "details",
+            "min_price",
+            "min_delivery_time",
+        ]
+
+    def get_min_price(self, obj):
+        prices = obj.details.values_list("price", flat=True)
+        return min(prices) if prices else None
+
+    def get_min_delivery_time(self, obj):
+        times = obj.details.values_list("delivery_time_in_days", flat=True)
+        return min(times) if times else None
