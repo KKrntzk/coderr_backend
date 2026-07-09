@@ -35,10 +35,22 @@ class OfferListView(ListAPIView):
 
         min_price = self.request.query_params.get("min_price")
         if min_price:
+            try:
+                min_price = float(min_price)
+            except ValueError:
+                from rest_framework.exceptions import ValidationError
+
+                raise ValidationError({"min_price": "Must be a valid number."})
             queryset = queryset.filter(min_price__gte=min_price)
 
         max_delivery_time = self.request.query_params.get("max_delivery_time")
         if max_delivery_time:
+            try:
+                max_delivery_time = int(max_delivery_time)
+            except ValueError:
+                from rest_framework.exceptions import ValidationError
+
+                raise ValidationError({"max_delivery_time": "Must be a valid integer."})
             queryset = queryset.filter(min_delivery_time__lte=max_delivery_time)
 
         return queryset
