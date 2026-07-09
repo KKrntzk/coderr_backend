@@ -8,6 +8,7 @@ from rest_framework.generics import (
     ListCreateAPIView,
     RetrieveAPIView,
     RetrieveUpdateAPIView,
+    RetrieveUpdateDestroyAPIView,
 )
 
 
@@ -85,11 +86,11 @@ class OfferListCreateView(ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-class OfferRetrieveUpdateView(RetrieveUpdateAPIView):
-    http_method_names = ["get", "patch", "head", "options"]
+class OfferRetrieveUpdateView(RetrieveUpdateDestroyAPIView):
+    http_method_names = ["get", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
-        if self.request.method == "PATCH":
+        if self.request.method in ["PATCH", "DELETE"]:
             return [IsAuthenticated(), IsOfferOwner()]
         return [IsAuthenticated()]
 
