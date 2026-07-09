@@ -4,7 +4,11 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Min
-from rest_framework.generics import ListCreateAPIView, RetrieveAPIView
+from rest_framework.generics import (
+    ListCreateAPIView,
+    RetrieveAPIView,
+    RetrieveUpdateAPIView,
+)
 
 
 from offers_app.models import Offer
@@ -12,8 +16,9 @@ from offers_app.api.serializers import (
     OfferListSerializer,
     OfferCreateSerializer,
     OfferRetrieveSerializer,
+    OfferUpdateSerializer,
 )
-from offers_app.api.permissions import IsBusinessUser
+from offers_app.api.permissions import IsBusinessUser, IsOfferOwner
 
 
 class OfferPagination(PageNumberPagination):
@@ -89,3 +94,28 @@ class OfferRetrieveView(RetrieveAPIView):
             min_price=Min("details__price"),
             min_delivery_time=Min("details__delivery_time_in_days"),
         )
+
+
+class OfferRetrieveUpdateView(RetrieveUpdateAPIView):
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), IsOfferOwner()]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return OfferUpdateSerializer
+        return OfferRetrieveSerializer
+
+    def get_queryset(self):
+        return Offer.objects.annotate(
+            min_price=Min("details__price"),
+            min_delivery_time=Min("details__delivery_time_in_days"),
+        )
+
+    def get_object(self):
+        obj = super().get_object()
+        self.check_object_permissions(self.request, obj)
+        return obj
