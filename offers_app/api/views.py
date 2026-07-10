@@ -21,6 +21,7 @@ from offers_app.api.serializers import (
     OfferDetailCreateSerializer,
 )
 from offers_app.api.permissions import IsBusinessUser, IsOfferOwner
+from rest_framework.exceptions import ValidationError
 
 
 class OfferPagination(PageNumberPagination):
@@ -45,42 +46,41 @@ class OfferListCreateView(ListCreateAPIView):
             return OfferCreateSerializer
         return OfferListSerializer
 
+    def _filter_by_creator_id(self, queryset):
+        creator_id = self.request.query_params.get("creator_id")
+        if not creator_id:
+            return queryset
+        try:
+            return queryset.filter(user__id=int(creator_id))
+        except ValueError:
+            raise ValidationError({"creator_id": "Must be a valid integer."})
+
+    def _filter_by_min_price(self, queryset):
+        min_price = self.request.query_params.get("min_price")
+        if not min_price:
+            return queryset
+        try:
+            return queryset.filter(min_price__gte=float(min_price))
+        except ValueError:
+            raise ValidationError({"min_price": "Must be a valid number."})
+
+    def _filter_by_max_delivery_time(self, queryset):
+        max_delivery_time = self.request.query_params.get("max_delivery_time")
+        if not max_delivery_time:
+            return queryset
+        try:
+            return queryset.filter(min_delivery_time__lte=int(max_delivery_time))
+        except ValueError:
+            raise ValidationError({"max_delivery_time": "Must be a valid integer."})
+
     def get_queryset(self):
         queryset = Offer.objects.annotate(
             min_price=Min("details__price"),
             min_delivery_time=Min("details__delivery_time_in_days"),
         )
-
-        creator_id = self.request.query_params.get("creator_id")
-        if creator_id:
-            try:
-                creator_id = int(creator_id)
-            except ValueError:
-                from rest_framework.exceptions import ValidationError
-
-                raise ValidationError({"creator_id": "Must be a valid integer."})
-            queryset = queryset.filter(user__id=creator_id)
-
-        min_price = self.request.query_params.get("min_price")
-        if min_price:
-            try:
-                min_price = float(min_price)
-            except ValueError:
-                from rest_framework.exceptions import ValidationError
-
-                raise ValidationError({"min_price": "Must be a valid number."})
-            queryset = queryset.filter(min_price__gte=min_price)
-
-        max_delivery_time = self.request.query_params.get("max_delivery_time")
-        if max_delivery_time:
-            try:
-                max_delivery_time = int(max_delivery_time)
-            except ValueError:
-                from rest_framework.exceptions import ValidationError
-
-                raise ValidationError({"max_delivery_time": "Must be a valid integer."})
-            queryset = queryset.filter(min_delivery_time__lte=max_delivery_time)
-
+        queryset = self._filter_by_creator_id(queryset)
+        queryset = self._filter_by_min_price(queryset)
+        queryset = self._filter_by_max_delivery_time(queryset)
         return queryset
 
     def perform_create(self, serializer):
