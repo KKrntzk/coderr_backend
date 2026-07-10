@@ -190,31 +190,33 @@ class OfferUpdateSerializer(serializers.ModelSerializer):
             "details",
         ]
 
-    def update(self, instance, validated_data):
-        details_data = validated_data.pop("details", None)
-
+    def _update_offer_fields(self, instance, validated_data):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
+    def _update_features(self, offer_detail, features_data):
+        if features_data is not None:
+            offer_detail.features.all().delete()
+            for feature_name in features_data:
+                Feature.objects.create(offer_detail=offer_detail, name=feature_name)
+
+    def _update_offer_detail(self, instance, detail_data):
+        offer_type = detail_data.get("offer_type")
+        features_data = detail_data.pop("features", None)
+        offer_detail = instance.details.filter(offer_type=offer_type).first()
+        if offer_detail:
+            for attr, value in detail_data.items():
+                setattr(offer_detail, attr, value)
+            offer_detail.save()
+            self._update_features(offer_detail, features_data)
+
+    def update(self, instance, validated_data):
+        details_data = validated_data.pop("details", None)
+        self._update_offer_fields(instance, validated_data)
         if details_data:
             for detail_data in details_data:
-                offer_type = detail_data.get("offer_type")
-                features_data = detail_data.pop("features", None)
-
-                offer_detail = instance.details.filter(offer_type=offer_type).first()
-                if offer_detail:
-                    for attr, value in detail_data.items():
-                        setattr(offer_detail, attr, value)
-                    offer_detail.save()
-
-                    if features_data is not None:
-                        offer_detail.features.all().delete()
-                        for feature_name in features_data:
-                            Feature.objects.create(
-                                offer_detail=offer_detail, name=feature_name
-                            )
-
+                self._update_offer_detail(instance, detail_data)
         return instance
 
     def to_representation(self, instance):
