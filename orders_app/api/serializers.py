@@ -29,11 +29,6 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         model = Order
         fields = ["id", "offer_detail_id"]
 
-    def validate_offer_detail_id(self, value):
-        if not OfferDetail.objects.filter(id=value).exists():
-            raise serializers.ValidationError("OfferDetail not found.")
-        return value
-
     def create(self, validated_data):
         offer_detail_id = validated_data.pop("offer_detail_id")
         offer_detail = OfferDetail.objects.get(id=offer_detail_id)
