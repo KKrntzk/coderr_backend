@@ -1,5 +1,5 @@
-from rest_framework.generics import ListAPIView, CreateAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import ListCreateAPIView
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -11,18 +11,22 @@ from orders_app.api.permissions import IsCustomerUser
 from offers_app.models import OfferDetail
 
 
-class OrderListView(ListAPIView):
+class OrderListCreateView(ListCreateAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = OrderSerializer
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsCustomerUser()]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return OrderCreateSerializer
+        return OrderSerializer
 
     def get_queryset(self):
         user = self.request.user
         return Order.objects.filter(Q(customer_user=user) | Q(business_user=user))
-
-
-class OrderCreateView(CreateAPIView):
-    permission_classes = [IsAuthenticated, IsCustomerUser]
-    serializer_class = OrderCreateSerializer
 
     def create(self, request, *args, **kwargs):
         offer_detail_id = request.data.get("offer_detail_id")
