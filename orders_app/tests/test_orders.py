@@ -229,3 +229,63 @@ class OrderUpdateViewTest(APITestCase):
         url = reverse("order-update", kwargs={"pk": 9999})
         response = self.client.patch(url, {"status": "completed"})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class OrderDeleteViewTest(APITestCase):
+
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            username="testcustomer",
+            email="customer@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.business = User.objects.create_user(
+            username="testbusiness",
+            email="business@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.admin = User.objects.create_user(
+            username="testadmin",
+            email="admin@mail.de",
+            password="testpassword123",
+            type="business",
+            is_staff=True,
+        )
+        self.business_token = Token.objects.create(user=self.business)
+        self.admin_token = Token.objects.create(user=self.admin)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.admin_token.key)
+
+        self.order = Order.objects.create(
+            customer_user=self.customer,
+            business_user=self.business,
+            title="Logo Design",
+            revisions=3,
+            delivery_time_in_days=5,
+            price=150,
+            features=["Logo Design", "Visitenkarten"],
+            offer_type="basic",
+        )
+        self.url = reverse("order-update", kwargs={"pk": self.order.pk})
+
+    def test_delete_order_success(self):
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Order.objects.filter(pk=self.order.pk).exists())
+
+    def test_delete_order_not_admin(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.business_token.key)
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Order.objects.filter(pk=self.order.pk).exists())
+
+    def test_delete_order_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_order_not_found(self):
+        url = reverse("order-update", kwargs={"pk": 9999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
