@@ -55,3 +55,6 @@ class OrderStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ["status"]
+
+    def to_representation(self, instance):
+        return OrderSerializer(instance).data

@@ -150,3 +150,82 @@ class OrderCreateViewTest(APITestCase):
         self.client.credentials()
         response = self.client.post(self.url, {"offer_detail_id": self.offer_detail.id})
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class OrderUpdateViewTest(APITestCase):
+
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            username="testcustomer",
+            email="customer@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.business = User.objects.create_user(
+            username="testbusiness",
+            email="business@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.other_business = User.objects.create_user(
+            username="otherbusiness",
+            email="otherbusiness@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.customer_token = Token.objects.create(user=self.customer)
+        self.business_token = Token.objects.create(user=self.business)
+        self.other_business_token = Token.objects.create(user=self.other_business)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.business_token.key)
+
+        self.order = Order.objects.create(
+            customer_user=self.customer,
+            business_user=self.business,
+            title="Logo Design",
+            revisions=3,
+            delivery_time_in_days=5,
+            price=150,
+            features=["Logo Design", "Visitenkarten"],
+            offer_type="basic",
+        )
+        self.url = reverse("order-update", kwargs={"pk": self.order.pk})
+
+    def test_patch_order_status_success(self):
+        response = self.client.patch(self.url, {"status": "completed"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "completed")
+
+    def test_patch_order_other_fields_unchanged(self):
+        response = self.client.patch(
+            self.url,
+            {
+                "status": "completed",
+                "title": "Hacked Title",
+                "price": 9999,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["title"], "Logo Design")
+        self.assertEqual(str(response.data["price"]), "150.00")
+
+    def test_patch_order_not_business_owner(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION="Token " + self.other_business_token.key
+        )
+        response = self.client.patch(self.url, {"status": "completed"})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_patch_order_customer_forbidden(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.customer_token.key)
+        response = self.client.patch(self.url, {"status": "completed"})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_patch_order_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.patch(self.url, {"status": "completed"})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_patch_order_not_found(self):
+        url = reverse("order-update", kwargs={"pk": 9999})
+        response = self.client.patch(url, {"status": "completed"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
