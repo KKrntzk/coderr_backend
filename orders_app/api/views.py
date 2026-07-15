@@ -1,5 +1,5 @@
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -44,11 +44,17 @@ class OrderListCreateView(ListCreateAPIView):
         return super().create(request, *args, **kwargs)
 
 
-class OrderUpdateView(RetrieveUpdateAPIView):
-    http_method_names = ["patch", "head", "options"]
-    permission_classes = [IsAuthenticated, IsOrderBusinessOwner]
-    serializer_class = OrderStatusUpdateSerializer
+class OrderUpdateDestroyView(RetrieveUpdateDestroyAPIView):
+    http_method_names = ["patch", "delete", "head", "options"]
     queryset = Order.objects.all()
+
+    def get_permissions(self):
+        if self.request.method == "DELETE":
+            return [IsAuthenticated(), IsAdminUser()]
+        return [IsAuthenticated(), IsOrderBusinessOwner()]
+
+    def get_serializer_class(self):
+        return OrderStatusUpdateSerializer
 
     def get_object(self):
         obj = super().get_object()
