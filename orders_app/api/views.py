@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from django.db.models import Q
+from django.contrib.auth import get_user_model
+from rest_framework.views import APIView
 
 from orders_app.models import Order
 from orders_app.api.serializers import (
@@ -13,6 +15,8 @@ from orders_app.api.serializers import (
 )
 from orders_app.api.permissions import IsCustomerUser, IsOrderBusinessOwner
 from offers_app.models import OfferDetail
+
+User = get_user_model()
 
 
 class OrderListCreateView(ListCreateAPIView):
@@ -60,3 +64,18 @@ class OrderUpdateDestroyView(RetrieveUpdateDestroyAPIView):
         obj = super().get_object()
         self.check_object_permissions(self.request, obj)
         return obj
+
+
+class OrderCountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, business_user_id):
+        if not User.objects.filter(id=business_user_id, type="business").exists():
+            raise NotFound("Business user not found.")
+
+        count = Order.objects.filter(
+            business_user_id=business_user_id,
+            status="in_progress",
+        ).count()
+
+        return Response({"order_count": count})
