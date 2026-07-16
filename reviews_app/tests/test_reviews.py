@@ -11,7 +11,7 @@ User = get_user_model()
 class ReviewListViewTest(APITestCase):
 
     def setUp(self):
-        self.url = reverse("review-list")
+        self.url = reverse("review-list-create")
         self.customer = User.objects.create_user(
             username="testcustomer",
             email="customer@mail.de",
@@ -81,3 +81,74 @@ class ReviewListViewTest(APITestCase):
         self.assertIn("reviewer", result)
         self.assertIn("rating", result)
         self.assertIn("description", result)
+
+
+class ReviewCreateViewTest(APITestCase):
+
+    def setUp(self):
+        self.url = reverse("review-list-create")
+        self.customer = User.objects.create_user(
+            username="testcustomer",
+            email="customer@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.business = User.objects.create_user(
+            username="testbusiness",
+            email="business@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.other_customer = User.objects.create_user(
+            username="othercustomer",
+            email="othercustomer@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.customer_token = Token.objects.create(user=self.customer)
+        self.business_token = Token.objects.create(user=self.business)
+        self.other_customer_token = Token.objects.create(user=self.other_customer)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.customer_token.key)
+        self.valid_data = {
+            "business_user": self.business.id,
+            "rating": 4,
+            "description": "Alles war toll!",
+        }
+
+    def test_create_review_success(self):
+        response = self.client.post(self.url, self.valid_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["business_user"], self.business.id)
+        self.assertEqual(response.data["reviewer"], self.customer.id)
+        self.assertEqual(response.data["rating"], 4)
+
+    def test_create_review_duplicate(self):
+        self.client.post(self.url, self.valid_data)
+        response = self.client.post(self.url, self.valid_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_review_target_not_business(self):
+        data = self.valid_data.copy()
+        data["business_user"] = self.other_customer.id
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_review_business_forbidden(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.business_token.key)
+        response = self.client.post(self.url, self.valid_data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_review_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.post(self.url, self.valid_data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_review_different_customers_allowed(self):
+        response1 = self.client.post(self.url, self.valid_data)
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION="Token " + self.other_customer_token.key
+        )
+        response2 = self.client.post(self.url, self.valid_data)
+        self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
