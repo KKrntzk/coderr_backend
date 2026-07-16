@@ -13,7 +13,8 @@ from orders_app.api.serializers import (
     OrderCreateSerializer,
     OrderStatusUpdateSerializer,
 )
-from orders_app.api.permissions import IsCustomerUser, IsOrderBusinessOwner
+from core.permissions import IsCustomerUser
+from orders_app.api.permissions import IsOrderBusinessOwner
 from offers_app.models import OfferDetail
 
 User = get_user_model()
