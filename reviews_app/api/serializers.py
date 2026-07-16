@@ -43,3 +43,12 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return ReviewSerializer(instance).data
+
+
+class ReviewUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ["rating", "description"]
+
+    def to_representation(self, instance):
+        return ReviewSerializer(instance).data
