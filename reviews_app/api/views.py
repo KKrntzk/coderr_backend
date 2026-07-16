@@ -1,18 +1,27 @@
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListCreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import OrderingFilter
 from rest_framework.exceptions import ValidationError
 
+from core.permissions import IsCustomerUser
 from reviews_app.models import Review
-from reviews_app.api.serializers import ReviewSerializer
+from reviews_app.api.serializers import ReviewSerializer, ReviewCreateSerializer
 
 
-class ReviewListView(ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = ReviewSerializer
+class ReviewListCreateView(ListCreateAPIView):
     filter_backends = [OrderingFilter]
     ordering_fields = ["updated_at", "rating"]
     ordering = ["-updated_at"]
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsCustomerUser()]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return ReviewCreateSerializer
+        return ReviewSerializer
 
     def _filter_by_business_user_id(self, queryset):
         business_user_id = self.request.query_params.get("business_user_id")
