@@ -152,3 +152,90 @@ class ReviewCreateViewTest(APITestCase):
         )
         response2 = self.client.post(self.url, self.valid_data)
         self.assertEqual(response2.status_code, status.HTTP_201_CREATED)
+
+
+class ReviewUpdateDestroyViewTest(APITestCase):
+
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            username="testcustomer",
+            email="customer@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.other_customer = User.objects.create_user(
+            username="othercustomer",
+            email="othercustomer@mail.de",
+            password="testpassword123",
+            type="customer",
+        )
+        self.business = User.objects.create_user(
+            username="testbusiness",
+            email="business@mail.de",
+            password="testpassword123",
+            type="business",
+        )
+        self.customer_token = Token.objects.create(user=self.customer)
+        self.other_customer_token = Token.objects.create(user=self.other_customer)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + self.customer_token.key)
+
+        self.review = Review.objects.create(
+            business_user=self.business,
+            reviewer=self.customer,
+            rating=4,
+            description="Sehr professionell.",
+        )
+        self.url = reverse("review-update-destroy", kwargs={"pk": self.review.pk})
+
+    def test_patch_review_success(self):
+        response = self.client.patch(
+            self.url, {"rating": 5, "description": "Noch besser!"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["rating"], 5)
+        self.assertEqual(response.data["description"], "Noch besser!")
+
+    def test_patch_review_business_user_unchanged(self):
+        response = self.client.patch(self.url, {"rating": 5})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["business_user"], self.business.id)
+
+    def test_patch_review_not_owner(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION="Token " + self.other_customer_token.key
+        )
+        response = self.client.patch(self.url, {"rating": 1})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_patch_review_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.patch(self.url, {"rating": 1})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_patch_review_not_found(self):
+        url = reverse("review-update-destroy", kwargs={"pk": 9999})
+        response = self.client.patch(url, {"rating": 1})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_review_success(self):
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Review.objects.filter(pk=self.review.pk).exists())
+
+    def test_delete_review_not_owner(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION="Token " + self.other_customer_token.key
+        )
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Review.objects.filter(pk=self.review.pk).exists())
+
+    def test_delete_review_unauthenticated(self):
+        self.client.credentials()
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_review_not_found(self):
+        url = reverse("review-update-destroy", kwargs={"pk": 9999})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
