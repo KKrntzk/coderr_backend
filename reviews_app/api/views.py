@@ -1,11 +1,16 @@
-from rest_framework.generics import ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import OrderingFilter
 from rest_framework.exceptions import ValidationError
 
 from core.permissions import IsCustomerUser
 from reviews_app.models import Review
-from reviews_app.api.serializers import ReviewSerializer, ReviewCreateSerializer
+from reviews_app.api.serializers import (
+    ReviewSerializer,
+    ReviewCreateSerializer,
+    ReviewUpdateSerializer,
+)
+from reviews_app.api.permissions import IsReviewer
 
 
 class ReviewListCreateView(ListCreateAPIView):
@@ -46,3 +51,15 @@ class ReviewListCreateView(ListCreateAPIView):
         queryset = self._filter_by_business_user_id(queryset)
         queryset = self._filter_by_reviewer_id(queryset)
         return queryset
+
+
+class ReviewUpdateDestroyView(RetrieveUpdateDestroyAPIView):
+    http_method_names = ["patch", "delete", "head", "options"]
+    permission_classes = [IsAuthenticated, IsReviewer]
+    serializer_class = ReviewUpdateSerializer
+    queryset = Review.objects.all()
+
+    def get_object(self):
+        obj = super().get_object()
+        self.check_object_permissions(self.request, obj)
+        return obj
