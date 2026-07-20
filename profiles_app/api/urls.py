@@ -1,8 +1,9 @@
 from django.urls import path
+
 from profiles_app.api.views import (
-    ProfileDetailView,
     BusinessProfileListView,
     CustomerProfileListView,
+    ProfileDetailView,
 )
 
 urlpatterns = [

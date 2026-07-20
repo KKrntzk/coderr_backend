@@ -1,4 +1,5 @@
 from django.urls import path
+
 from reviews_app.api.views import ReviewListCreateView, ReviewUpdateDestroyView
 
 urlpatterns = [

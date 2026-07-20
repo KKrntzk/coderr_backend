@@ -1,9 +1,12 @@
 from rest_framework import serializers
-from orders_app.models import Order
+
 from offers_app.models import OfferDetail
+from orders_app.models import Order
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    """Read-only serializer exposing all fields of an order."""
+
     class Meta:
         model = Order
         fields = [
@@ -24,6 +27,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating an order from an offer detail's snapshot."""
+
     offer_detail_id = serializers.IntegerField(write_only=True)
 
     class Meta:
@@ -31,6 +36,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         fields = ["id", "offer_detail_id"]
 
     def create(self, validated_data):
+        """Copy the offer detail's data into a new order for the requesting user."""
         offer_detail_id = validated_data.pop("offer_detail_id")
         offer_detail = OfferDetail.objects.get(id=offer_detail_id)
         request = self.context["request"]
@@ -48,13 +54,17 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         return order
 
     def to_representation(self, instance):
+        """Return the full order representation after creation."""
         return OrderSerializer(instance).data
 
 
 class OrderStatusUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating only an order's status."""
+
     class Meta:
         model = Order
         fields = ["status"]
 
     def to_representation(self, instance):
+        """Return the full order representation after the status update."""
         return OrderSerializer(instance).data

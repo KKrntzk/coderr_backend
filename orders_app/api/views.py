@@ -1,43 +1,55 @@
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
-from rest_framework.response import Response
+from django.contrib.auth import get_user_model
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.exceptions import NotFound
-from django.db.models import Q
-from django.contrib.auth import get_user_model
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from orders_app.models import Order
+from core.permissions import IsCustomerUser
+from offers_app.models import OfferDetail
+from orders_app.api.permissions import IsOrderBusinessOwner
 from orders_app.api.serializers import (
-    OrderSerializer,
     OrderCreateSerializer,
+    OrderSerializer,
     OrderStatusUpdateSerializer,
 )
-from core.permissions import IsCustomerUser
-from orders_app.api.permissions import IsOrderBusinessOwner
-from offers_app.models import OfferDetail
+from orders_app.models import Order
 
 User = get_user_model()
 
 
+def _get_business_user_or_404(business_user_id):
+    """Raise a 404 unless the given id belongs to a business user."""
+    if not User.objects.filter(id=business_user_id, type="business").exists():
+        raise NotFound("Business user not found.")
+
+
 class OrderListCreateView(ListCreateAPIView):
+    """List the requesting user's orders, or create a new order (customers only)."""
+
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
+        """Restrict order creation to customers."""
         if self.request.method == "POST":
             return [IsAuthenticated(), IsCustomerUser()]
         return [IsAuthenticated()]
 
     def get_serializer_class(self):
+        """Use the create serializer for POST, the read serializer otherwise."""
         if self.request.method == "POST":
             return OrderCreateSerializer
         return OrderSerializer
 
     def get_queryset(self):
+        """Return orders where the user is either the customer or the business."""
         user = self.request.user
         return Order.objects.filter(Q(customer_user=user) | Q(business_user=user))
 
     def create(self, request, *args, **kwargs):
+        """Validate offer_detail_id before delegating to the default create flow."""
         offer_detail_id = request.data.get("offer_detail_id")
         if not offer_detail_id:
             return Response(
@@ -50,48 +62,53 @@ class OrderListCreateView(ListCreateAPIView):
 
 
 class OrderUpdateDestroyView(RetrieveUpdateDestroyAPIView):
+    """Update an order's status (business owner only) or delete it (admin only)."""
+
     http_method_names = ["patch", "delete", "head", "options"]
     queryset = Order.objects.all()
 
     def get_permissions(self):
+        """Restrict deletion to admins; status updates to the order's business owner."""
         if self.request.method == "DELETE":
             return [IsAuthenticated(), IsAdminUser()]
         return [IsAuthenticated(), IsOrderBusinessOwner()]
 
     def get_serializer_class(self):
+        """Only the status field is editable via this endpoint."""
         return OrderStatusUpdateSerializer
 
     def get_object(self):
+        """Fetch the order and enforce object-level permissions."""
         obj = super().get_object()
         self.check_object_permissions(self.request, obj)
         return obj
 
 
 class OrderCountView(APIView):
+    """Return the number of in-progress orders for a business user."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, business_user_id):
-        if not User.objects.filter(id=business_user_id, type="business").exists():
-            raise NotFound("Business user not found.")
-
+        """Count in-progress orders for the given business user."""
+        _get_business_user_or_404(business_user_id)
         count = Order.objects.filter(
             business_user_id=business_user_id,
             status="in_progress",
         ).count()
-
         return Response({"order_count": count})
 
 
 class CompletedOrderCountView(APIView):
+    """Return the number of completed orders for a business user."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, business_user_id):
-        if not User.objects.filter(id=business_user_id, type="business").exists():
-            raise NotFound("Business user not found.")
-
+        """Count completed orders for the given business user."""
+        _get_business_user_or_404(business_user_id)
         count = Order.objects.filter(
             business_user_id=business_user_id,
             status="completed",
         ).count()
-
         return Response({"completed_order_count": count})

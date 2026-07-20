@@ -1,8 +1,15 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 
 class CustomUser(AbstractUser):
+    """User model extended with profile fields and a customer/business type.
+
+    In addition to the default Django auth fields, this model stores
+    profile information directly on the user (instead of a separate
+    profile model), since every user has exactly one profile.
+    """
+
     CUSTOMER = "customer"
     BUSINESS = "business"
 

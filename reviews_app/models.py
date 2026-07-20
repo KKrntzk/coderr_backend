@@ -1,10 +1,12 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
 User = get_user_model()
 
 
 class Review(models.Model):
+    """A customer's review of a business user's services."""
+
     business_user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="received_reviews"
     )
@@ -25,4 +27,5 @@ class Review(models.Model):
         ]
 
     def __str__(self):
+        """Return a short summary of who reviewed whom with which rating."""
         return f"{self.reviewer} -> {self.business_user} ({self.rating})"

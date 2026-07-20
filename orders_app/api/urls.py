@@ -1,9 +1,10 @@
 from django.urls import path
+
 from orders_app.api.views import (
+    CompletedOrderCountView,
+    OrderCountView,
     OrderListCreateView,
     OrderUpdateDestroyView,
-    OrderCountView,
-    CompletedOrderCountView,
 )
 
 urlpatterns = [

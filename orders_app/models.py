@@ -1,10 +1,16 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
 User = get_user_model()
 
 
 class Order(models.Model):
+    """An order placed by a customer for a specific offer detail.
+
+    Order data is a frozen snapshot of the offer detail at the time of
+    purchase, so later changes to the offer do not affect existing orders.
+    """
+
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
@@ -34,4 +40,5 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
+        """Return the order's title together with its current status."""
         return f"{self.title} ({self.status})"

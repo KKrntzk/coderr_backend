@@ -1,14 +1,16 @@
-from django.urls import reverse
-from rest_framework.test import APITestCase
-from rest_framework import status
 from django.contrib.auth import get_user_model
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
 
 User = get_user_model()
 
 
 class RegistrationViewTest(APITestCase):
+    """Tests for POST /api/registration/."""
 
     def setUp(self):
+        """Set up the registration URL and valid payload."""
         self.url = reverse("registration")
         self.valid_data = {
             "username": "testuser",
@@ -19,6 +21,7 @@ class RegistrationViewTest(APITestCase):
         }
 
     def test_registration_success(self):
+        """A valid payload creates a user and returns a token."""
         response = self.client.post(self.url, self.valid_data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("token", response.data)
@@ -27,6 +30,7 @@ class RegistrationViewTest(APITestCase):
         self.assertEqual(response.data["email"], "test@mail.de")
 
     def test_registration_password_mismatch(self):
+        """Mismatched passwords are rejected with a 400."""
         data = self.valid_data.copy()
         data["repeated_password"] = "wrongpassword"
         response = self.client.post(self.url, data)
@@ -34,6 +38,7 @@ class RegistrationViewTest(APITestCase):
         self.assertIn("repeated_password", response.data)
 
     def test_registration_missing_email(self):
+        """A missing email is rejected with a 400."""
         data = self.valid_data.copy()
         data.pop("email")
         response = self.client.post(self.url, data)
@@ -41,6 +46,7 @@ class RegistrationViewTest(APITestCase):
         self.assertIn("email", response.data)
 
     def test_registration_duplicate_username(self):
+        """Registering the same username twice is rejected with a 400."""
         self.client.post(self.url, self.valid_data)
         response = self.client.post(self.url, self.valid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -48,8 +54,10 @@ class RegistrationViewTest(APITestCase):
 
 
 class LoginViewTest(APITestCase):
+    """Tests for POST /api/login/."""
 
     def setUp(self):
+        """Create a test user for login attempts."""
         self.url = reverse("login")
         self.user = User.objects.create_user(
             username="testuser",
@@ -59,6 +67,7 @@ class LoginViewTest(APITestCase):
         )
 
     def test_login_success(self):
+        """Valid credentials return a token and user details."""
         response = self.client.post(
             self.url,
             {
@@ -73,6 +82,7 @@ class LoginViewTest(APITestCase):
         self.assertEqual(response.data["email"], "test@mail.de")
 
     def test_login_wrong_password(self):
+        """An incorrect password is rejected with a 400."""
         response = self.client.post(
             self.url,
             {
@@ -84,6 +94,7 @@ class LoginViewTest(APITestCase):
         self.assertIn("detail", response.data)
 
     def test_login_wrong_username(self):
+        """A non-existent username is rejected with a 400."""
         response = self.client.post(
             self.url,
             {
@@ -95,5 +106,6 @@ class LoginViewTest(APITestCase):
         self.assertIn("detail", response.data)
 
     def test_login_missing_fields(self):
+        """Missing credentials are rejected with a 400."""
         response = self.client.post(self.url, {})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

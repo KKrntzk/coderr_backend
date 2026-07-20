@@ -1,10 +1,12 @@
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 
 User = get_user_model()
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    """Serializer for retrieving and updating a single user's profile."""
+
     user = serializers.IntegerField(source="id", read_only=True)
     created_at = serializers.DateTimeField(source="date_joined", read_only=True)
 
@@ -32,6 +34,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class ProfileListSerializer(serializers.ModelSerializer):
+    """Serializer for listing business profiles."""
+
     user = serializers.IntegerField(source="id", read_only=True)
 
     class Meta:
@@ -51,6 +55,8 @@ class ProfileListSerializer(serializers.ModelSerializer):
 
 
 class CustomerProfileListSerializer(serializers.ModelSerializer):
+    """Serializer for listing customer profiles."""
+
     user = serializers.IntegerField(source="id", read_only=True)
 
     class Meta:

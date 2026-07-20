@@ -1,10 +1,12 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
 User = get_user_model()
 
 
 class Offer(models.Model):
+    """A service offer created by a business user."""
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="offers")
     title = models.CharField(max_length=255)
     image = models.ImageField(upload_to="offer_images/", blank=True, null=True)
@@ -13,10 +15,13 @@ class Offer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
+        """Return the offer's title."""
         return self.title
 
 
 class OfferDetail(models.Model):
+    """One pricing tier (basic/standard/premium) belonging to an offer."""
+
     BASIC = "basic"
     STANDARD = "standard"
     PREMIUM = "premium"
@@ -35,14 +40,18 @@ class OfferDetail(models.Model):
     offer_type = models.CharField(max_length=20, choices=OFFER_TYPE_CHOICES)
 
     def __str__(self):
+        """Return the parent offer's title together with the tier name."""
         return f"{self.offer.title} - {self.offer_type}"
 
 
 class Feature(models.Model):
+    """A single feature included in an offer detail."""
+
     offer_detail = models.ForeignKey(
         OfferDetail, on_delete=models.CASCADE, related_name="features"
     )
     name = models.CharField(max_length=255)
 
     def __str__(self):
+        """Return the feature's name."""
         return self.name

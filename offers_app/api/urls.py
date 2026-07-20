@@ -1,8 +1,9 @@
 from django.urls import path
+
 from offers_app.api.views import (
+    OfferDetailRetrieveView,
     OfferListCreateView,
     OfferRetrieveUpdateDestroyView,
-    OfferDetailRetrieveView,
 )
 
 urlpatterns = [
