@@ -24,7 +24,7 @@ Follow these steps to get the development server running locally:
 
 ### 1. Clone the repository & enter the directory
 ```bash
-git clone <repo-url>
+git clone https://github.com/KKrntzk/coderr_backend.git
 
 cd coderr_backend
 ```
@@ -59,7 +59,7 @@ pip install -r requirements.txt
 The project requires a `.env` file for local configuration and secrets. Copy the provided template and fill in your local values:
 
 ```bash
-cp .env.template .env
+Copy-Item .template.env .env
 ```
 Open the newly created `.env` file and set the following variables:
 
