@@ -257,6 +257,22 @@ class OfferUpdateViewTest(APITestCase):
         self.assertEqual(standard["title"], "Standard")
         self.assertEqual(str(standard["price"]), "200.00")
 
+    def test_patch_offer_detail_without_offer_type(self):
+        """A detail without an offer_type is rejected with a 400."""
+        response = self.client.patch(
+            self.url,
+            {
+                "details": [
+                    {
+                        "title": "Basic Updated",
+                        "price": 120,
+                    }
+                ]
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class OfferDeleteViewTest(APITestCase):
     """Tests for DELETE /api/offers/{id}/."""

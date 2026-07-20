@@ -258,3 +258,12 @@ class OfferUpdateSerializer(serializers.ModelSerializer):
                 instance.details.all(), many=True
             ).data,
         }
+
+    def validate_details(self, value):
+        """Ensure every detail includes an offer_type to identify it."""
+        for detail in value:
+            if not detail.get("offer_type"):
+                raise serializers.ValidationError(
+                    "Each detail must include an offer_type."
+                )
+        return value
