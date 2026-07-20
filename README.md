@@ -22,9 +22,11 @@ The API covers user onboarding, business/customer profiles, service offers with 
 
 Follow these steps to get the development server running locally:
 
+> Note: On macOS/Linux you may need to use `python3` and `pip3` instead of `python` and `pip`, depending on your setup.
+
 ### 1. Clone the repository & enter the directory
 ```bash
-git clone https://github.com/KKrntzk/coderr_backend.git
+git clone <repo-url>
 
 cd coderr_backend
 ```
@@ -32,15 +34,20 @@ cd coderr_backend
 ### 2. Create the virtual environment
 To avoid environment pollution and issues with specific Python versions, create the environment without pre-installed packages first:
 
-Windows (PowerShell)
 ```bash
 python -m venv .venv
 ```
 
 ### 3. Activate the virtual environment
 
+Windows (PowerShell)
 ```bash
 .venv\Scripts\Activate.ps1
+```
+
+macOS / Linux
+```bash
+source .venv/bin/activate
 ```
 
 Note for Windows users: If you get a script execution policy error, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` in your terminal first, then try activating again.
@@ -58,8 +65,14 @@ pip install -r requirements.txt
 
 The project requires a `.env` file for local configuration and secrets. Copy the provided template and fill in your local values:
 
+Windows (PowerShell)
 ```bash
 Copy-Item .template.env .env
+```
+
+macOS / Linux
+```bash
+cp .template.env .env
 ```
 Open the newly created `.env` file and set the following variables:
 
