@@ -129,6 +129,12 @@ class ProfilePatchViewTest(APITestCase):
         self.assertEqual(response.data["location"], "")
         self.assertEqual(response.data["description"], "")
 
+    def test_patch_profile_email_updates(self):
+        """The email field can be updated via PATCH."""
+        response = self.client.patch(self.url, {"email": "neue_email@mail.de"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["email"], "neue_email@mail.de")
+
 
 class BusinessProfileListViewTest(APITestCase):
     """Tests for GET /api/profiles/business/."""
