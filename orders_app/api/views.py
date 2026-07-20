@@ -48,14 +48,29 @@ class OrderListCreateView(ListCreateAPIView):
         user = self.request.user
         return Order.objects.filter(Q(customer_user=user) | Q(business_user=user))
 
-    def create(self, request, *args, **kwargs):
-        """Validate offer_detail_id before delegating to the default create flow."""
+    def _validate_offer_detail_id(self, request):
+        """Return a 400 response if offer_detail_id is missing or not an integer."""
         offer_detail_id = request.data.get("offer_detail_id")
         if not offer_detail_id:
             return Response(
                 {"detail": "offer_detail_id is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        try:
+            int(offer_detail_id)
+        except (ValueError, TypeError):
+            return Response(
+                {"offer_detail_id": "Must be a valid integer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return None
+
+    def create(self, request, *args, **kwargs):
+        """Validate offer_detail_id, then delegate to the default create flow."""
+        error_response = self._validate_offer_detail_id(request)
+        if error_response:
+            return error_response
+        offer_detail_id = int(request.data.get("offer_detail_id"))
         if not OfferDetail.objects.filter(id=offer_detail_id).exists():
             raise NotFound("OfferDetail not found.")
         return super().create(request, *args, **kwargs)

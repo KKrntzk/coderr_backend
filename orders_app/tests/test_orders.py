@@ -168,6 +168,11 @@ class OrderCreateViewTest(APITestCase):
         response = self.client.post(self.url, {"offer_detail_id": self.offer_detail.id})
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_create_order_offer_detail_id_not_integer(self):
+        """A non-integer offer_detail_id is rejected with a 400."""
+        response = self.client.post(self.url, {"offer_detail_id": "abc"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class OrderUpdateViewTest(APITestCase):
     """Tests for PATCH /api/orders/{id}/."""
