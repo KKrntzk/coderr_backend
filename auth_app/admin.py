@@ -8,4 +8,19 @@ from auth_app.models import CustomUser
 class CustomUserAdmin(UserAdmin):
     """Admin configuration for CustomUser, extending the default fieldsets."""
 
-    fieldsets = UserAdmin.fieldsets + (("Additional Info", {"fields": ("type",)}),)
+    fieldsets = UserAdmin.fieldsets + (
+        (
+            "Additional Info",
+            {
+                "fields": (
+                    "type",
+                    "file",
+                    "location",
+                    "tel",
+                    "description",
+                    "working_hours",
+                    "uploaded_at",
+                )
+            },
+        ),
+    )
